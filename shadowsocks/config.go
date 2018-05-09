@@ -32,6 +32,7 @@ type Config struct {
 	Timeout      int               `json:"timeout"`
 
 	// following options are only used by client
+	AllowIps []string `json:"allow_ips"`
 
 	// The order of servers in the client config is significant, so use array
 	// instead of map to preserve the order.

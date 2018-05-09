@@ -331,7 +331,7 @@ func handleConnection(conn net.Conn) {
 	debug.Println("closed connection to", addr)
 }
 
-func run(listenAddr string) {
+func run(listenAddr string, config *ss.Config) {
 	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -343,8 +343,32 @@ func run(listenAddr string) {
 			log.Println("accept:", err)
 			continue
 		}
+		clientIp, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+		if err != nil {
+			log.Printf("获取客户端IP错误: [%s] %s\n", conn.RemoteAddr().String(), err)
+			conn.Close()
+			continue
+		}
+		if !checkClientIp(clientIp, config) {
+			log.Printf("IP[%s]不允许访问\n", clientIp)
+			conn.Close()
+			continue
+		}
 		go handleConnection(conn)
 	}
+}
+
+func checkClientIp(clientIp string, config *ss.Config) bool  {
+	if len(config.AllowIps) == 0 {
+		return true
+	}
+	for _, ip := range config.AllowIps {
+		if clientIp == ip {
+			return true
+		}
+	}
+
+	return false
 }
 
 func enoughOptions(config *ss.Config) bool {
@@ -425,5 +449,5 @@ func main() {
 	}
 
 	parseServerConfig(config)
-	run(config.LocalAddress + ":" + strconv.Itoa(config.LocalPort))
+	run(config.LocalAddress + ":" + strconv.Itoa(config.LocalPort), config)
 }
